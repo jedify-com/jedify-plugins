@@ -1,0 +1,20 @@
+{
+  "jedify-schema-context": {
+    "command": "uvx",
+    "args": ["jedify-lens"],
+    "env": {
+      "WAREHOUSE_TYPE": "",
+      "SNOWFLAKE_ACCOUNT": "",
+      "SNOWFLAKE_USER": "",
+      "SNOWFLAKE_PASSWORD": "",
+      "SNOWFLAKE_DATABASE": "",
+      "SNOWFLAKE_SCHEMA": "",
+      "SNOWFLAKE_WAREHOUSE": "",
+      "SNOWFLAKE_ROLE": "",
+      "BIGQUERY_PROJECT": "",
+      "GOOGLE_APPLICATION_CREDENTIALS": "",
+      "POSTGRES_DSN": "",
+      "REDSHIFT_DSN": ""
+    }
+  }
+}

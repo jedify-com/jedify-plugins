@@ -1,0 +1,15 @@
+{
+  "name": "jedify-schema-context",
+  "version": "0.1.0",
+  "description": "Connect Claude to your data warehouse and generate rich semantic context for every table and column — labels, descriptions, semantic types, and example questions. Output is a structured YAML file ready to use with Jedify or any NL-to-SQL tool.",
+  "author": {
+    "name": "Jedify",
+    "email": "adi@jedify.com"
+  },
+  "homepage": "https://jedify.com/schema-context",
+  "repository": "https://github.com/jedify-com/skills",
+  "license": "MIT",
+  "keywords": ["schema", "warehouse", "snowflake", "bigquery", "postgres", "context", "sql", "semantic"],
+  "skills": "skills/",
+  "mcpServers": ".mcp.json"
+}
