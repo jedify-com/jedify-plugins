@@ -26,7 +26,7 @@ def test_build_authorize_url(monkeypatch):
     assert qs["response_type"] == ["code"]
     assert qs["client_id"] == ["UDJmR3RzQW01emlBWnIwc3dEeU1ETzdUY2U4NzpUUEEzRXRxZDdhbE5oSjdEZTdTNmhycUx4RFZpczAj"]
     assert qs["redirect_uri"] == ["http://localhost:8765/callback"]
-    assert qs["scope"] == ["openid email profile"]
+    assert qs["scope"] == ["openid email"]
     assert qs["code_challenge"] == ["CHALLENGE"]
     assert qs["code_challenge_method"] == ["S256"]
     assert qs["state"] == ["STATE123"]

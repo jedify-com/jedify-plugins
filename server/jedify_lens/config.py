@@ -16,7 +16,9 @@ _DEFAULT_CLIENT_ID = "UDJmR3RzQW01emlBWnIwc3dEeU1ETzdUY2U4NzpUUEEzRXRxZDdhbE5oSj
 
 REDIRECT_PORT = 8765
 REDIRECT_URI = f"http://localhost:{REDIRECT_PORT}/callback"
-SCOPES = "openid email profile"
+# The Inbound App grants only `email` as a user-info scope (plus `openid`). Requesting
+# `profile` is rejected ("invalid scope"); email is all we need (it's the lead).
+SCOPES = "openid email"
 
 
 def base_url() -> str:

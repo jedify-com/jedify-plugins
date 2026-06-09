@@ -22,4 +22,4 @@ def test_env_overrides_and_strip_trailing_slash(monkeypatch):
 def test_redirect_and_scope_constants():
     assert config.REDIRECT_PORT == 8765
     assert config.REDIRECT_URI == "http://localhost:8765/callback"
-    assert config.SCOPES == "openid email profile"
+    assert config.SCOPES == "openid email"
