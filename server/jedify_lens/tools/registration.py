@@ -3,7 +3,6 @@ import base64
 import hashlib
 import json
 import logging
-import os
 import secrets
 import webbrowser
 
@@ -14,13 +13,11 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 import httpx
 
+from jedify_lens import config
+
 logger = logging.getLogger("jedify_lens.registration")
 
 _STATE_PATH = Path.home() / ".jedify" / "state.json"
-_CALLBACK_PORT = 8765
-_REDIRECT_URI = f"http://localhost:{_CALLBACK_PORT}/callback"
-_AUTH_ENDPOINT = "https://api.descope.com/oauth2/v1/authorize"
-_TOKEN_ENDPOINT = "https://api.descope.com/oauth2/v1/token"
 
 
 # ---------------------------------------------------------------------------
@@ -39,16 +36,33 @@ def _save_state(state: dict) -> None:
     _STATE_PATH.write_text(json.dumps(state, indent=2))
 
 
+def _generate_pkce() -> tuple[str, str]:
+    """Return (code_verifier, code_challenge) for an S256 PKCE exchange."""
+    verifier = secrets.token_urlsafe(32)
+    challenge = (
+        base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
+        .rstrip(b"=")
+        .decode()
+    )
+    return verifier, challenge
+
+
+def build_authorize_url(code_challenge: str, state: str) -> str:
+    """Build the Descope Inbound App authorize URL (sign-up-or-sign-in)."""
+    return f"{config.authorize_url()}?" + urlencode({
+        "response_type": "code",
+        "client_id": config.client_id(),
+        "redirect_uri": config.REDIRECT_URI,
+        "scope": config.SCOPES,
+        "state": state,
+        "code_challenge": code_challenge,
+        "code_challenge_method": "S256",
+    })
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-def _project_id() -> str:
-    pid = os.environ.get("DESCOPE_PROJECT_ID", "")
-    if not pid:
-        raise RuntimeError("DESCOPE_PROJECT_ID is not set.")
-    return pid
-
 
 def _extract_token(data: dict) -> str:
     """Prefer id_token over access_token (mirrors the TS implementation)."""
@@ -120,7 +134,7 @@ async def check_registration() -> dict:
     # Token expired — try refresh
     if refresh_tok:
         try:
-            pid = _project_id()
+            pid = config.client_id()
             data = await _do_refresh(refresh_tok, pid)
             new_token = _extract_token(data)
             state["access_token"] = new_token
@@ -144,7 +158,7 @@ async def check_registration() -> dict:
 
 
 async def browser_login() -> dict:
-    pid = _project_id()
+    pid = config.client_id()
 
     # PKCE
     code_verifier = secrets.token_urlsafe(32)
