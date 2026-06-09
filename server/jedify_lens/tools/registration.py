@@ -51,8 +51,8 @@ def _generate_pkce() -> tuple[str, str]:
 def build_authorize_url(code_challenge: str, state: str) -> str:
     """Build the Descope Inbound App authorize URL (sign-up-or-sign-in).
 
-    `prompt=consent` triggers Descope's consent screen — Inbound Apps require the user
-    to approve the requested scopes, otherwise the flow fails with "missing consent".
+    No `prompt` param: the Inbound App is configured to auto-grant consent
+    ("Skip consent screen"), so forcing a consent prompt here would conflict and fail.
     """
     return f"{config.authorize_url()}?" + urlencode({
         "response_type": "code",
@@ -62,7 +62,6 @@ def build_authorize_url(code_challenge: str, state: str) -> str:
         "state": state,
         "code_challenge": code_challenge,
         "code_challenge_method": "S256",
-        "prompt": "consent",
     })
 
 
