@@ -89,22 +89,36 @@ def _is_token_valid(token: str) -> bool:
         return False
 
 
-async def _do_refresh(refresh_tok: str, pid: str) -> dict:
+async def _post_token(data: dict) -> dict:
+    """POST a form-encoded request to the Descope token endpoint and return JSON."""
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            _TOKEN_ENDPOINT,
-            headers={
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Authorization": f"Bearer {pid}",
-            },
-            data={
-                "grant_type": "refresh_token",
-                "refresh_token": refresh_tok,
-                "client_id": pid,
-            },
+            config.token_url(),
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data=data,
         )
-        resp.raise_for_status()
-        return resp.json()
+    resp.raise_for_status()
+    return resp.json()
+
+
+async def exchange_code(code: str, code_verifier: str) -> dict:
+    """Exchange an authorization code for tokens (public PKCE client — no secret)."""
+    return await _post_token({
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": config.REDIRECT_URI,
+        "client_id": config.client_id(),
+        "code_verifier": code_verifier,
+    })
+
+
+async def _do_refresh(refresh_tok: str) -> dict:
+    """Refresh tokens for a public PKCE client (no secret)."""
+    return await _post_token({
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_tok,
+        "client_id": config.client_id(),
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -134,8 +148,7 @@ async def check_registration() -> dict:
     # Token expired — try refresh
     if refresh_tok:
         try:
-            pid = config.client_id()
-            data = await _do_refresh(refresh_tok, pid)
+            data = await _do_refresh(refresh_tok)
             new_token = _extract_token(data)
             state["access_token"] = new_token
             if data.get("refresh_token"):
