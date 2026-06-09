@@ -49,6 +49,34 @@ async def test_expired_token_refreshes(monkeypatch, tmp_path):
     )
     result = await registration.check_registration()
     assert result["registered"] is True
+    assert result["email"] == "bob@acme.com"
     persisted = json.loads(state_file.read_text())
     assert persisted["access_token"] == fresh
     assert persisted["refresh_token"] == "rtok2"
+
+
+async def test_expired_token_no_refresh_token_unregistered(monkeypatch, tmp_path):
+    state_file = tmp_path / "state.json"
+    expired = _make_jwt({"exp": int(time.time()) - 10})
+    state_file.write_text(json.dumps({"access_token": expired, "email": "bob@acme.com"}))
+    monkeypatch.setattr(registration, "_STATE_PATH", state_file)
+    result = await registration.check_registration()
+    assert result["registered"] is False
+    assert "login_tool" in result["action"]
+
+
+@respx.mock
+async def test_expired_token_refresh_failure_unregistered(monkeypatch, tmp_path):
+    monkeypatch.delenv("DESCOPE_BASE_URL", raising=False)
+    monkeypatch.delenv("DESCOPE_CLIENT_ID", raising=False)
+    state_file = tmp_path / "state.json"
+    expired = _make_jwt({"exp": int(time.time()) - 10})
+    state_file.write_text(
+        json.dumps({"access_token": expired, "refresh_token": "rtok", "email": "bob@acme.com"})
+    )
+    monkeypatch.setattr(registration, "_STATE_PATH", state_file)
+    respx.post("https://auth.app.jedify.com/oauth2/v1/apps/token").mock(
+        return_value=httpx.Response(400, json={"error": "invalid_grant"})
+    )
+    result = await registration.check_registration()
+    assert result["registered"] is False

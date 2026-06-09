@@ -18,7 +18,6 @@ def test_validate_callback_provider_error():
     code, err = registration.validate_callback({"error": "access_denied"}, "RIGHT")
     assert code is None
     assert err["success"] is False
-    assert "access_denied" in err["action"]
 
 
 def test_validate_callback_missing_code():

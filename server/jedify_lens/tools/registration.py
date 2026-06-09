@@ -98,8 +98,8 @@ async def _post_token(data: dict) -> dict:
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             data=data,
         )
-    resp.raise_for_status()
-    return resp.json()
+        resp.raise_for_status()
+        return resp.json()
 
 
 async def exchange_code(code: str, code_verifier: str) -> dict:
@@ -181,9 +181,10 @@ def validate_callback(callback_data: dict, sent_state: str) -> tuple[str | None,
     checks truthiness with .get() rather than key presence.
     """
     if callback_data.get("error"):
+        logger.warning("OAuth provider returned error: %s", callback_data["error"])
         return None, {
             "success": False,
-            "action": f"Tell the user: 'Auth error — {callback_data['error']}'",
+            "action": "Tell the user: 'Sign-in was not completed (the provider returned an error) — please try again.'",
         }
     if callback_data.get("state") != sent_state:
         return None, {
@@ -247,7 +248,14 @@ async def browser_login() -> dict:
         def log_message(self, *args):
             pass
 
-    server = HTTPServer(("localhost", config.REDIRECT_PORT), CallbackHandler)
+    try:
+        server = HTTPServer(("localhost", config.REDIRECT_PORT), CallbackHandler)
+    except OSError as e:
+        logger.error("Could not bind callback port %d: %s", config.REDIRECT_PORT, e)
+        return {
+            "success": False,
+            "action": "Tell the user: 'Could not start the sign-in listener (port 8765 may be in use) — please close any other sign-in attempt and try again.'",
+        }
     Thread(target=server.serve_forever, daemon=True).start()
 
     opened = webbrowser.open(auth_url)
@@ -288,8 +296,8 @@ async def browser_login() -> dict:
             "action": f"Tell the user: 'You're signed in as {email}.' Then proceed to the company context step.",
         }
     except Exception as e:
-        logger.error(f"Token exchange failed: {e}")
-        return {"success": False, "action": f"Tell the user: 'Authentication failed — {e}'"}
+        logger.error("Token exchange failed: %s", e)
+        return {"success": False, "action": "Tell the user: 'Authentication failed — please try again.'"}
 
 
 async def save_company_context(context: str) -> dict:

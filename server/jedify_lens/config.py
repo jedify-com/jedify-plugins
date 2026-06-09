@@ -33,4 +33,5 @@ def token_url() -> str:
 
 
 def issuer() -> str:
+    # Reserved for future server-side JWT verification (validating the `iss` claim).
     return f"{base_url()}/v1/apps/{client_id()}"
