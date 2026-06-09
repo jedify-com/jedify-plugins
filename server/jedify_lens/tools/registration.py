@@ -149,11 +149,12 @@ async def check_registration() -> dict:
     if refresh_tok:
         try:
             data = await _do_refresh(refresh_tok)
-            new_token = _extract_token(data)
-            state["access_token"] = new_token
-            if data.get("refresh_token"):
-                state["refresh_token"] = data["refresh_token"]
-            _save_state(state)
+            updated = {
+                **state,
+                "access_token": _extract_token(data),
+                **({"refresh_token": data["refresh_token"]} if data.get("refresh_token") else {}),
+            }
+            _save_state(updated)
             logger.debug("Token refreshed successfully")
             return {
                 "registered": True,
@@ -162,7 +163,7 @@ async def check_registration() -> dict:
                 "message": f"Signed in as {email}.",
             }
         except Exception as e:
-            logger.debug(f"Token refresh failed: {e}")
+            logger.warning(f"Token refresh failed: {e}")
 
     return {
         "registered": False,
