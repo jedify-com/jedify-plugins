@@ -9,7 +9,10 @@ There is no client secret anywhere — this is a public PKCE client.
 import os
 
 _DEFAULT_BASE_URL = "https://auth.app.jedify.com"
-_DEFAULT_CLIENT_ID = "P2fGtsAm5ziAZr0swDyMDO7Tce87"
+# Inbound App Client ID — an opaque, base64-looking OAuth client identifier.
+# Use it verbatim; do NOT base64-decode it (the decoded form is the project:app id,
+# which Descope rejects as an invalid client_id).
+_DEFAULT_CLIENT_ID = "UDJmR3RzQW01emlBWnIwc3dEeU1ETzdUY2U4NzpUUEEzRXRxZDdhbE5oSjdEZTdTNmhycUx4RFZpczAj"
 
 REDIRECT_PORT = 8765
 REDIRECT_URI = f"http://localhost:{REDIRECT_PORT}/callback"
@@ -30,8 +33,3 @@ def authorize_url() -> str:
 
 def token_url() -> str:
     return f"{base_url()}/oauth2/v1/apps/token"
-
-
-def issuer() -> str:
-    # Reserved for future server-side JWT verification (validating the `iss` claim).
-    return f"{base_url()}/v1/apps/{client_id()}"

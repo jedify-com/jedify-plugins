@@ -21,7 +21,7 @@ async def test_exchange_code_posts_pkce_without_secret(monkeypatch):
     assert "grant_type=authorization_code" in body
     assert "code=THECODE" in body
     assert "code_verifier=THEVERIFIER" in body
-    assert "client_id=P2fGtsAm5ziAZr0swDyMDO7Tce87" in body
+    assert "client_id=UDJmR3RzQW01emlBWnIwc3dEeU1ETzdUY2U4NzpUUEEzRXRxZDdhbE5oSjdEZTdTNmhycUx4RFZpczAj" in body
     assert "client_secret" not in body
     header_names = {k.lower() for k in route.calls.last.request.headers.keys()}
     assert "authorization" not in header_names
@@ -40,7 +40,7 @@ async def test_do_refresh_uses_client_id_without_secret(monkeypatch):
     body = route.calls.last.request.content.decode()
     assert "grant_type=refresh_token" in body
     assert "refresh_token=REFRESHTOK" in body
-    assert "client_id=P2fGtsAm5ziAZr0swDyMDO7Tce87" in body
+    assert "client_id=UDJmR3RzQW01emlBWnIwc3dEeU1ETzdUY2U4NzpUUEEzRXRxZDdhbE5oSjdEZTdTNmhycUx4RFZpczAj" in body
     assert "client_secret" not in body
     header_names = {k.lower() for k in route.calls.last.request.headers.keys()}
     assert "authorization" not in header_names

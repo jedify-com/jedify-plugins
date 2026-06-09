@@ -24,7 +24,7 @@ def test_build_authorize_url(monkeypatch):
     qs = parse_qs(parsed.query)
     assert parsed.path == "/oauth2/v1/apps/authorize"
     assert qs["response_type"] == ["code"]
-    assert qs["client_id"] == ["P2fGtsAm5ziAZr0swDyMDO7Tce87"]
+    assert qs["client_id"] == ["UDJmR3RzQW01emlBWnIwc3dEeU1ETzdUY2U4NzpUUEEzRXRxZDdhbE5oSjdEZTdTNmhycUx4RFZpczAj"]
     assert qs["redirect_uri"] == ["http://localhost:8765/callback"]
     assert qs["scope"] == ["openid email profile"]
     assert qs["code_challenge"] == ["CHALLENGE"]

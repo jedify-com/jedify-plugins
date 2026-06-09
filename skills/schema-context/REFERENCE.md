@@ -157,7 +157,7 @@ sign up / sign in.
 | Variable | Default (prod) | Purpose |
 |---|---|---|
 | `DESCOPE_BASE_URL` | `https://auth.app.jedify.com` | Descope base URL (custom domain) |
-| `DESCOPE_CLIENT_ID` | `P2fGtsAm5ziAZr0swDyMDO7Tce87` | Inbound App client_id (public) |
+| `DESCOPE_CLIENT_ID` | `UDJmR3RzQW01emlBWnIwc3dEeU1ETzdUY2U4Nzp…` | Inbound App client_id (public, opaque — use verbatim, do not decode) |
 
 Both values are **public identifiers** (like an OAuth `client_id`) — there is no client
 secret. The flow is a public-client Authorization Code + PKCE exchange with a
