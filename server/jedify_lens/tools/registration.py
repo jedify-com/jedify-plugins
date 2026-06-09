@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import hashlib
+import html
 import json
 import logging
 import secrets
@@ -171,30 +172,39 @@ async def check_registration() -> dict:
     }
 
 
+def validate_callback(callback_data: dict, sent_state: str) -> tuple[str | None, dict | None]:
+    """Validate the OAuth callback. Returns (code, error_result).
+
+    On success: (code, None). On failure: (None, error_dict) ready to return to the skill.
+
+    The callback handler always sets callback_data["error"] (None when absent), so this
+    checks truthiness with .get() rather than key presence.
+    """
+    if callback_data.get("error"):
+        return None, {
+            "success": False,
+            "action": f"Tell the user: 'Auth error — {callback_data['error']}'",
+        }
+    if callback_data.get("state") != sent_state:
+        return None, {
+            "success": False,
+            "action": "Tell the user: 'Sign-in could not be verified (state mismatch) — please try again.'",
+        }
+    code = callback_data.get("code")
+    if not code:
+        return None, {
+            "success": False,
+            "action": "Tell the user: 'No auth code received — please try again.'",
+        }
+    return code, None
+
+
 async def browser_login() -> dict:
-    pid = config.client_id()
-
-    # PKCE
-    code_verifier = secrets.token_urlsafe(32)
-    code_challenge = (
-        base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
-        .rstrip(b"=")
-        .decode()
-    )
+    code_verifier, code_challenge = _generate_pkce()
     state_param = secrets.token_urlsafe(32)
+    auth_url = build_authorize_url(code_challenge, state_param)
 
-    auth_url = f"{_AUTH_ENDPOINT}?" + urlencode({
-        "response_type": "code",
-        "client_id": pid,
-        "redirect_uri": _REDIRECT_URI,
-        "scope": "openid",
-        "state": state_param,
-        "code_challenge": code_challenge,
-        "code_challenge_method": "S256",
-        "prompt": "login",
-    })
-
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     callback_event = asyncio.Event()
     callback_data: dict = {}
 
@@ -203,18 +213,17 @@ async def browser_login() -> dict:
             parsed = urlparse(self.path)
             if parsed.path == "/callback":
                 qs = parse_qs(parsed.query)
-                error = qs.get("error", [None])[0]
-                code = qs.get("code", [None])[0]
+                callback_data["error"] = qs.get("error", [None])[0]
+                callback_data["code"] = qs.get("code", [None])[0]
+                callback_data["state"] = qs.get("state", [None])[0]
 
-                if error:
-                    callback_data["error"] = error
+                if callback_data["error"]:
                     body = (
                         f"<html><body style='font-family:sans-serif;text-align:center;padding:60px'>"
-                        f"<h2>Authentication error</h2><p>{error}</p></body></html>"
+                        f"<h2>Authentication error</h2><p>{html.escape(callback_data['error'])}</p></body></html>"
                     ).encode()
                     self.send_response(400)
-                elif code:
-                    callback_data["code"] = code
+                elif callback_data["code"]:
                     body = (
                         b"<html><body style='font-family:sans-serif;text-align:center;padding:60px'>"
                         b"<h2>&#10003; Signed in!</h2>"
@@ -238,58 +247,39 @@ async def browser_login() -> dict:
         def log_message(self, *args):
             pass
 
-    server = HTTPServer(("localhost", _CALLBACK_PORT), CallbackHandler)
+    server = HTTPServer(("localhost", config.REDIRECT_PORT), CallbackHandler)
     Thread(target=server.serve_forever, daemon=True).start()
 
-    webbrowser.open(auth_url)
-    logger.info("Opened Descope OAuth login")
+    opened = webbrowser.open(auth_url)
+    if not opened:
+        logger.warning("No browser could be opened automatically. Sign in here: %s", auth_url)
+    else:
+        logger.debug("Opened browser for OAuth sign-in.")
 
     try:
         await asyncio.wait_for(callback_event.wait(), timeout=300)
     except asyncio.TimeoutError:
-        server.shutdown()
         return {"success": False, "action": "Tell the user: 'Sign-in timed out — please try again.'"}
     finally:
         server.shutdown()
 
-    if "error" in callback_data:
-        auth_error = callback_data["error"]
-        return {"success": False, "action": f"Tell the user: 'Auth error — {auth_error}'"}
-
-    code = callback_data.get("code")
-    if not code:
-        return {"success": False, "action": "Tell the user: 'No auth code received — please try again.'"}
+    code, error = validate_callback(callback_data, state_param)
+    if error:
+        return error
 
     try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                _TOKEN_ENDPOINT,
-                headers={
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "Authorization": f"Bearer {pid}",
-                },
-                data={
-                    "grant_type": "authorization_code",
-                    "code": code,
-                    "redirect_uri": _REDIRECT_URI,
-                    "client_id": pid,
-                    "code_verifier": code_verifier,
-                },
-            )
-            resp.raise_for_status()
-            data = resp.json()
-
+        data = await exchange_code(code, code_verifier)
         access_token = _extract_token(data)
         refresh_tok = data.get("refresh_token", "")
         email = _token_email(data.get("id_token", access_token))
 
         state = _load_state()
-        state.update({
+        _save_state({
+            **state,
             "email": email,
             "access_token": access_token,
             "refresh_token": refresh_tok,
         })
-        _save_state(state)
 
         return {
             "success": True,
@@ -297,7 +287,6 @@ async def browser_login() -> dict:
             "email": email,
             "action": f"Tell the user: 'You're signed in as {email}.' Then proceed to the company context step.",
         }
-
     except Exception as e:
         logger.error(f"Token exchange failed: {e}")
         return {"success": False, "action": f"Tell the user: 'Authentication failed — {e}'"}
@@ -305,8 +294,7 @@ async def browser_login() -> dict:
 
 async def save_company_context(context: str) -> dict:
     state = _load_state()
-    state["company_context"] = context.strip()
-    _save_state(state)
+    _save_state({**state, "company_context": context.strip()})
     return {
         "success": True,
         "message": "Company context saved. It will be used to enrich table and column descriptions.",
