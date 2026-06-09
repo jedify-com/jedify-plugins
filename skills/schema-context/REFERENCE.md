@@ -125,8 +125,9 @@ These are the only tools jedify-lens registers. All database queries go through 
 
 | Tool | Description |
 |---|---|
-| `check_registration_tool` | First-run check — call before anything else |
-| `register_user_tool(email, company)` | Register on first use |
+| `check_registration_tool` | First-run check — call before anything else (returns `registered` and any saved `company_context`) |
+| `login_tool` | Opens the Descope sign-up / sign-in page in the browser; blocks until the user completes it |
+| `save_company_context_tool(context)` | Save optional company/dataset context to improve enrichment |
 | `export_context_yaml_tool(enriched_context, output_path, warehouse_type)` | Write YAML file to disk |
 
 ---
@@ -142,3 +143,23 @@ These are the only tools jedify-lens registers. All database queries go through 
 **BigQuery INFORMATION_SCHEMA access denied**: Your service account needs `roles/bigquery.metadataViewer` and `roles/bigquery.dataViewer` on the relevant datasets.
 
 **jedify-lens not found**: Run `uvx jedify-lens --help` to verify installation. If missing, run `pip install jedify-lens`.
+
+---
+
+## Authentication (Descope)
+
+Sign-in is handled by Jedify's Descope **Inbound App**. The prod project is baked into
+the package, so end users need no auth configuration — the first run opens a browser to
+sign up / sign in.
+
+**Developers only** — point the plugin at a non-prod Descope project with env overrides:
+
+| Variable | Default (prod) | Purpose |
+|---|---|---|
+| `DESCOPE_BASE_URL` | `https://auth.app.jedify.com` | Descope base URL (custom domain) |
+| `DESCOPE_CLIENT_ID` | `P2fGtsAm5ziAZr0swDyMDO7Tce87` | Inbound App client_id (public) |
+
+Both values are **public identifiers** (like an OAuth `client_id`) — there is no client
+secret. The flow is a public-client Authorization Code + PKCE exchange with a
+`http://localhost:8765/callback` redirect, which must be allow-listed in the Descope
+Inbound App.
