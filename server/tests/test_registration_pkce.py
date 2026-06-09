@@ -30,4 +30,4 @@ def test_build_authorize_url(monkeypatch):
     assert qs["code_challenge"] == ["CHALLENGE"]
     assert qs["code_challenge_method"] == ["S256"]
     assert qs["state"] == ["STATE123"]
-    assert "prompt" not in qs
+    assert qs["prompt"] == ["consent"]
