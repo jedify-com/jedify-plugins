@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildMcpServer } from "../src/mcp";
+import { buildMcpServer } from "../src/mcp-server";
 
 describe("buildMcpServer", () => {
   it("registers the export_schema_context tool", () => {

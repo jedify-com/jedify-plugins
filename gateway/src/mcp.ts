@@ -1,47 +1,25 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
-import { buildSchemaContextYaml } from "./yaml.js";
+import { McpAgent } from "agents/mcp";
+import { buildMcpServer } from "./mcp-server.js";
 
-export function buildMcpServer(): McpServer {
-  const server = new McpServer({ name: "Jedify", version: "0.1.0" });
+type UserProps = { email: string };
 
-  server.registerTool(
-    "export_schema_context",
-    {
-      description:
-        "Format an enriched data-warehouse schema context into Jedify's schema-context YAML. " +
-        "Call after the schema has been read (via the user's warehouse connector) and enriched. " +
-        "Returns the YAML as text for the user to save.",
-      inputSchema: {
-        enriched_context: z
-          .object({ tables: z.array(z.any()) })
-          .passthrough()
-          .describe(
-            "Object with a `tables` array; each table has label, description, semantic_type, columns, etc.",
-          ),
-        warehouse_type: z
-          .string()
-          .default("")
-          .describe('e.g. "snowflake", "bigquery", "postgres"'),
-      },
-    },
-    async ({ enriched_context, warehouse_type }) => {
-      try {
-        const yamlText = buildSchemaContextYaml(enriched_context, warehouse_type);
-        return { content: [{ type: "text", text: yamlText }] };
-      } catch (e) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: "text",
-              text: `Failed to build schema context YAML: ${e instanceof Error ? e.message : String(e)}`,
-            },
-          ],
-        };
-      }
-    },
-  );
+// The project uses @modelcontextprotocol/sdk@1.29.0 while agents bundles 1.23.0.
+// Declaring server as `any` avoids the type incompatibility between the two versions.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AgentMcpServer = any;
 
-  return server;
+/**
+ * Jedify MCP Durable Object — serves the MCP protocol over Streamable HTTP.
+ * Receives authenticated user props (email) from OAuthProvider via this.props.
+ */
+export class JedifyMCP extends McpAgent<Cloudflare.Env, unknown, UserProps> {
+  server: AgentMcpServer = buildMcpServer();
+
+  async init(): Promise<void> {
+    // Tools are registered by buildMcpServer() at construction time.
+    // init() is called by the agents runtime after onStart — nothing extra needed.
+  }
 }
+
+// Re-export buildMcpServer so existing import paths keep working.
+export { buildMcpServer } from "./mcp-server.js";
