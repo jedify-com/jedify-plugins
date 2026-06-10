@@ -9,17 +9,34 @@ const SCOPES = "openid email";
 type Bindings = {
   OAUTH_PROVIDER: OAuthHelpers;
   OAUTH_KV: KVNamespace;
-  DESCOPE_CLIENT_SECRET: string;
 };
+
+type KvStateEntry = {
+  reqInfo: Awaited<ReturnType<OAuthHelpers["parseAuthRequest"]>>;
+  verifier: string;
+};
+
+function base64url(bytes: Uint8Array): string {
+  const s = btoa(String.fromCharCode(...bytes));
+  return s.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function generatePkce(): Promise<{ verifier: string; challenge: string }> {
+  const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)));
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  return { verifier, challenge: base64url(new Uint8Array(digest)) };
+}
 
 const app = new Hono<{ Bindings: Bindings }>();
 
 app.get("/authorize", async (c) => {
   const oauthReqInfo = await c.env.OAUTH_PROVIDER.parseAuthRequest(c.req.raw);
+  const { verifier, challenge } = await generatePkce();
   const nonce = crypto.randomUUID();
+  const entry: KvStateEntry = { reqInfo: oauthReqInfo, verifier };
   await c.env.OAUTH_KV.put(
     "authstate:" + nonce,
-    JSON.stringify(oauthReqInfo),
+    JSON.stringify(entry),
     { expirationTtl: 600 },
   );
   const redirectUri = new URL("/callback", c.req.url).href;
@@ -27,7 +44,8 @@ app.get("/authorize", async (c) => {
     `${DESCOPE_BASE}/oauth2/v1/apps/authorize?response_type=code` +
     `&client_id=${encodeURIComponent(DESCOPE_CLIENT_ID)}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&scope=${encodeURIComponent(SCOPES)}&state=${encodeURIComponent(nonce)}`;
+    `&scope=${encodeURIComponent(SCOPES)}&state=${encodeURIComponent(nonce)}` +
+    `&code_challenge=${encodeURIComponent(challenge)}&code_challenge_method=S256`;
   return c.redirect(url);
 });
 
@@ -38,9 +56,7 @@ app.get("/callback", async (c) => {
 
   const raw = await c.env.OAUTH_KV.get("authstate:" + state);
   if (!raw) return c.text("invalid or expired state", 400);
-  const oauthReqInfo = JSON.parse(raw) as Awaited<
-    ReturnType<OAuthHelpers["parseAuthRequest"]>
-  >;
+  const { reqInfo: oauthReqInfo, verifier } = JSON.parse(raw) as KvStateEntry;
   await c.env.OAUTH_KV.delete("authstate:" + state);
 
   const tokenRes = await fetch(`${DESCOPE_BASE}/oauth2/v1/apps/token`, {
@@ -51,7 +67,7 @@ app.get("/callback", async (c) => {
       code,
       redirect_uri: new URL("/callback", c.req.url).href,
       client_id: DESCOPE_CLIENT_ID,
-      client_secret: c.env.DESCOPE_CLIENT_SECRET,
+      code_verifier: verifier,
     }),
   });
 
@@ -102,7 +118,7 @@ export async function fetchEmail(accessToken: string): Promise<string> {
  * The env parameter is widened to `unknown` so this object satisfies the
  * ExportedHandler shape required by OAuthProviderOptions.defaultHandler.
  * The cast to Bindings is safe because OAuthProvider always injects
- * OAUTH_PROVIDER and the worker wrangler config provides DESCOPE_CLIENT_SECRET.
+ * OAUTH_PROVIDER and the worker wrangler config provides OAUTH_KV.
  */
 export const DescopeHandler = {
   fetch(request: Request, env: unknown, ctx: ExecutionContext): Promise<Response> {
