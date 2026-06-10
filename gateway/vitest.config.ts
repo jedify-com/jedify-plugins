@@ -12,17 +12,17 @@ export default defineConfig({
         test: {
           name: "workers",
           include: ["test/**/*.test.ts"],
-          exclude: ["test/mcp.test.ts"],
+          exclude: ["test/mcp.test.ts", "test/descope.test.ts"],
           poolOptions: {
             workers: { wrangler: { configPath: "./wrangler.jsonc" } },
           },
         },
       }),
-      // Node.js forks pool — mcp test (needs ajv JSON imports)
+      // Node.js forks pool — mcp test (needs ajv JSON imports) and descope test (needs vi.stubGlobal)
       {
         test: {
           name: "node",
-          include: ["test/mcp.test.ts"],
+          include: ["test/mcp.test.ts", "test/descope.test.ts"],
           pool: "forks",
           environment: "node",
         },

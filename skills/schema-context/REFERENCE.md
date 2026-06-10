@@ -2,26 +2,21 @@
 
 ## Setup
 
-Jedify Schema Context works with your existing database MCP server. You do **not** need to configure separate credentials — just connect your database MCP server and jedify-lens handles the rest.
+Jedify Schema Context works with your existing database MCP server. You do **not** need to configure separate credentials — just connect your database MCP server and sign in to the Jedify connector.
 
-### 1. Add jedify-lens to Claude Code
+### 1. Install the Jedify Connector
 
-Add this to your `~/.claude/settings.json` under `mcpServers`:
+Search for **Jedify** in the Claude plugin/connector directory, or install directly:
 
-```json
-{
-  "mcpServers": {
-    "jedify-schema-context": {
-      "command": "uvx",
-      "args": ["jedify-lens"]
-    }
-  }
-}
 ```
+/plugin install jedify@jedify-com-skills
+```
+
+Sign in once when prompted — that is the only authentication step. The connector handles Jedify's OAuth flow automatically.
 
 ### 2. Connect Your Database MCP Server
 
-Add one of the following to `mcpServers` as well:
+Add one of the following to `mcpServers` in your `~/.claude/settings.json`:
 
 #### Snowflake
 
@@ -67,6 +62,23 @@ See: [mcp-server-bigquery](https://github.com/LucasHild/mcp-server-bigquery)
 ```
 
 See: [@modelcontextprotocol/server-postgres](https://github.com/modelcontextprotocol/servers/tree/main/src/postgres)
+
+---
+
+## Jedify Connector Tool
+
+The Jedify connector exposes a single tool:
+
+| Tool | Description |
+|---|---|
+| `export_schema_context(enriched_context, warehouse_type)` | Format an enriched data-warehouse schema context into Jedify's schema-context YAML. Returns the YAML as text. |
+
+**Parameters:**
+
+- `enriched_context` — object with a `tables` array; each table has `label`, `description`, `semantic_type`, `columns`, etc. (see YAML Output Schema below).
+- `warehouse_type` — string identifying the warehouse, e.g. `"snowflake"`, `"bigquery"`, `"postgres"`.
+
+Typical workflow: read the schema from your connected database MCP server, enrich the table and column metadata, then call `export_schema_context` to produce the YAML for Jedify.
 
 ---
 
@@ -119,19 +131,6 @@ tables:
 
 ---
 
-## jedify-lens MCP Tools
-
-These are the only tools jedify-lens registers. All database queries go through your connected DB MCP server.
-
-| Tool | Description |
-|---|---|
-| `check_registration_tool` | First-run check — call before anything else (returns `registered` and any saved `company_context`) |
-| `login_tool` | Opens the Descope sign-up / sign-in page in the browser; blocks until the user completes it |
-| `save_company_context_tool(context)` | Save optional company/dataset context to improve enrichment |
-| `export_context_yaml_tool(enriched_context, output_path, warehouse_type)` | Write YAML file to disk |
-
----
-
 ## Troubleshooting
 
 **"No database tools found"**: You need a database MCP server connected. See the setup section above.
@@ -142,24 +141,10 @@ These are the only tools jedify-lens registers. All database queries go through 
 
 **BigQuery INFORMATION_SCHEMA access denied**: Your service account needs `roles/bigquery.metadataViewer` and `roles/bigquery.dataViewer` on the relevant datasets.
 
-**jedify-lens not found**: Run `uvx jedify-lens --help` to verify installation. If missing, run `pip install jedify-lens`.
-
 ---
 
-## Authentication (Descope)
+## Authentication
 
-Sign-in is handled by Jedify's Descope **Inbound App**. The prod project is baked into
-the package, so end users need no auth configuration — the first run opens a browser to
-sign up / sign in.
+Sign-in is handled by the Jedify connector's OAuth flow. When you first use the connector, you will be prompted to sign in via your browser — complete the sign-in once and the connector manages the session from that point on.
 
-**Developers only** — point the plugin at a non-prod Descope project with env overrides:
-
-| Variable | Default (prod) | Purpose |
-|---|---|---|
-| `DESCOPE_BASE_URL` | `https://auth.app.jedify.com` | Descope base URL (custom domain) |
-| `DESCOPE_CLIENT_ID` | `UDJmR3RzQW01emlBWnIwc3dEeU1ETzdUY2U4Nzp…` | Inbound App client_id (public, opaque — use verbatim, do not decode) |
-
-Both values are **public identifiers** (like an OAuth `client_id`) — there is no client
-secret. The flow is a public-client Authorization Code + PKCE exchange with a
-`http://localhost:8765/callback` redirect, which must be allow-listed in the Descope
-Inbound App.
+No manual auth configuration is required by end users. The connector's OAuth client is pre-configured with Jedify's identity provider.

@@ -8,6 +8,7 @@ const SCOPES = "openid email";
 
 type Bindings = {
   OAUTH_PROVIDER: OAuthHelpers;
+  OAUTH_KV: KVNamespace;
   DESCOPE_CLIENT_SECRET: string;
 };
 
@@ -15,13 +16,18 @@ const app = new Hono<{ Bindings: Bindings }>();
 
 app.get("/authorize", async (c) => {
   const oauthReqInfo = await c.env.OAUTH_PROVIDER.parseAuthRequest(c.req.raw);
-  const state = btoa(JSON.stringify(oauthReqInfo));
+  const nonce = crypto.randomUUID();
+  await c.env.OAUTH_KV.put(
+    "authstate:" + nonce,
+    JSON.stringify(oauthReqInfo),
+    { expirationTtl: 600 },
+  );
   const redirectUri = new URL("/callback", c.req.url).href;
   const url =
     `${DESCOPE_BASE}/oauth2/v1/apps/authorize?response_type=code` +
     `&client_id=${encodeURIComponent(DESCOPE_CLIENT_ID)}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&scope=${encodeURIComponent(SCOPES)}&state=${encodeURIComponent(state)}`;
+    `&scope=${encodeURIComponent(SCOPES)}&state=${encodeURIComponent(nonce)}`;
   return c.redirect(url);
 });
 
@@ -30,9 +36,12 @@ app.get("/callback", async (c) => {
   const state = c.req.query("state");
   if (!code || !state) return c.text("Missing code/state", 400);
 
-  const oauthReqInfo = JSON.parse(atob(state)) as Awaited<
+  const raw = await c.env.OAUTH_KV.get("authstate:" + state);
+  if (!raw) return c.text("invalid or expired state", 400);
+  const oauthReqInfo = JSON.parse(raw) as Awaited<
     ReturnType<OAuthHelpers["parseAuthRequest"]>
   >;
+  await c.env.OAUTH_KV.delete("authstate:" + state);
 
   const tokenRes = await fetch(`${DESCOPE_BASE}/oauth2/v1/apps/token`, {
     method: "POST",
@@ -52,7 +61,13 @@ app.get("/callback", async (c) => {
     id_token?: string;
     access_token?: string;
   };
-  const email = decodeJwtEmail(tokens.id_token ?? tokens.access_token ?? "");
+
+  const userinfoRes = await fetch(`${DESCOPE_BASE}/oauth2/v1/apps/userinfo`, {
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  });
+  const email = userinfoRes.ok
+    ? (((await userinfoRes.json()) as { email?: string }).email ?? "")
+    : "";
 
   const { redirectTo } = await c.env.OAUTH_PROVIDER.completeAuthorization({
     request: oauthReqInfo,
@@ -65,16 +80,18 @@ app.get("/callback", async (c) => {
   return c.redirect(redirectTo);
 });
 
-function decodeJwtEmail(jwt: string): string {
-  try {
-    const payload = jwt.split(".")[1];
-    const json = JSON.parse(
-      atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
-    ) as Record<string, unknown>;
-    return typeof json["email"] === "string" ? json["email"] : "";
-  } catch {
-    return "";
-  }
+/**
+ * Fetch the email for an access token from Descope's userinfo endpoint.
+ * Returns empty string if the request fails or the response contains no email.
+ * Exported for unit testing.
+ */
+export async function fetchEmail(accessToken: string): Promise<string> {
+  const res = await fetch(`${DESCOPE_BASE}/oauth2/v1/apps/userinfo`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) return "";
+  const data = (await res.json()) as { email?: string };
+  return data.email ?? "";
 }
 
 /**

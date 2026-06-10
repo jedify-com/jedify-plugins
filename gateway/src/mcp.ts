@@ -26,8 +26,20 @@ export function buildMcpServer(): McpServer {
       },
     },
     async ({ enriched_context, warehouse_type }) => {
-      const yamlText = buildSchemaContextYaml(enriched_context, warehouse_type);
-      return { content: [{ type: "text", text: yamlText }] };
+      try {
+        const yamlText = buildSchemaContextYaml(enriched_context, warehouse_type);
+        return { content: [{ type: "text", text: yamlText }] };
+      } catch (e) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Failed to build schema context YAML: ${e instanceof Error ? e.message : String(e)}`,
+            },
+          ],
+        };
+      }
     },
   );
 
