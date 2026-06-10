@@ -1,41 +1,34 @@
 # jedify-lens
 
-MCP server for data warehouse schema context generation. Powers the `schema-context` Claude skill.
+MCP server that connects Claude to your data warehouse and generates rich **semantic context YAML** for every table and column — business labels, descriptions, semantic types, and example questions. Powers the [`schema-context`](https://github.com/jedify-com/skills) Claude skill. Standalone — no dependency on Jedify's backend.
 
 ## Install
 
 ```bash
-pip install jedify-lens[snowflake]   # Snowflake support
-pip install jedify-lens[postgres]    # PostgreSQL / Redshift support
-pip install jedify-lens[all]         # All warehouses
+pip install jedify-lens
 ```
 
-Or via uvx (recommended for MCP servers):
+Or, recommended for MCP servers, run it on demand with uvx:
+
 ```bash
-uvx jedify-lens[snowflake]
+uvx jedify-lens
 ```
 
-## Configuration
+## How it works
 
-Set environment variables before running:
-
-| Variable | Required for | Description |
-|---|---|---|
-| `WAREHOUSE_TYPE` | All | `snowflake`, `postgres`, or `redshift` |
-| `SNOWFLAKE_ACCOUNT` | Snowflake | Account identifier, e.g. `xy12345.us-east-1` |
-| `SNOWFLAKE_USER` | Snowflake | Username |
-| `SNOWFLAKE_PASSWORD` | Snowflake | Password (or use `SNOWFLAKE_PRIVATE_KEY`) |
-| `SNOWFLAKE_DATABASE` | Snowflake | Default database |
-| `SNOWFLAKE_WAREHOUSE` | Snowflake | Compute warehouse |
-| `SNOWFLAKE_ROLE` | Snowflake | Optional role |
-| `POSTGRES_DSN` | Postgres | `postgresql://user:pass@host:5432/db` |
-| `REDSHIFT_DSN` | Redshift | `postgresql://user:pass@host:5439/db` |
+`jedify-lens` does **not** connect to your warehouse itself, so it needs no warehouse credentials. It works through whatever **database MCP server you already have connected** (Snowflake, BigQuery, PostgreSQL/Redshift): Claude reads your schema and sample rows through that database server, generates the semantic enrichment, and `jedify-lens` writes the structured YAML to disk.
 
 ## Tools
 
-- `check_registration_tool` — first-run registration check
-- `register_user_tool(email, company)` — register on first use
-- `list_available_tables_tool(schema_filter, include_views)` — discover tables
-- `get_table_schema_tool(table_names)` — columns, types, constraints
-- `sample_table_data_tool(table_name, row_limit, column_filter)` — random row sample
-- `export_context_yaml_tool(enriched_context, output_path, warehouse_type)` — write YAML
+- `check_registration_tool` — check sign-in state (call this first)
+- `login_tool` — open the Descope sign-up / sign-in page in the browser
+- `save_company_context_tool(context)` — save optional company/dataset context to improve enrichment
+- `export_context_yaml_tool(enriched_context, output_path, warehouse_type)` — write the schema-context YAML file
+
+## Authentication
+
+Sign-in uses Jedify's Descope inbound app via a public-client OAuth Authorization Code + PKCE flow — there is **no client secret**. The production project is baked in, so end users need no auth configuration. Developers can point at a non-prod project with the `DESCOPE_BASE_URL` and `DESCOPE_CLIENT_ID` environment variables (both are public identifiers).
+
+## License
+
+MIT — [jedify.com](https://jedify.com)
