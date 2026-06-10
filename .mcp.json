@@ -1,6 +1,6 @@
 {
-  "jedify-schema-context": {
-    "command": "uvx",
-    "args": ["jedify-lens"]
+  "jedify": {
+    "type": "url",
+    "url": "https://skills.jedify.com/mcp"
   }
 }

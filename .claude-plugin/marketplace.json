@@ -7,9 +7,9 @@
   },
   "plugins": [
     {
-      "name": "jedify-schema-context",
+      "name": "jedify",
       "source": ".",
-      "description": "Generate semantic context YAML for your data warehouse schema. Connects to Snowflake, BigQuery, Redshift, or Postgres and produces human-readable table labels, column descriptions, semantic types, and example business questions — ready to import into Jedify or any NL-to-SQL tool.",
+      "description": "Generate semantic context YAML for your data warehouse schema. Connects to Snowflake, BigQuery, Redshift, or Postgres through your existing warehouse connector and produces human-readable table labels, column descriptions, semantic types, and example business questions — ready to import into Jedify or any NL-to-SQL tool.",
       "category": "data",
       "keywords": ["schema", "warehouse", "snowflake", "bigquery", "postgres", "context", "sql", "semantic", "documentation"]
     }
