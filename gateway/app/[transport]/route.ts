@@ -4,11 +4,12 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { z } from "zod";
 import { buildSchemaContextYaml } from "@/lib/yaml";
 
+// Descope project "Jedify Plugin (MCP)" — isolated from prod (jedify-production).
 const DESCOPE_ISSUER =
-  "https://auth.app.jedify.com/v1/apps/P2fGtsAm5ziAZr0swDyMDO7Tce87";
+  "https://api.descope.com/v1/apps/P3EwuWB0eAPKe8h4vvQ2QhinomOE";
 const JWKS = createRemoteJWKSet(
   new URL(
-    "https://auth.app.jedify.com/P2fGtsAm5ziAZr0swDyMDO7Tce87/.well-known/jwks.json",
+    "https://api.descope.com/P3EwuWB0eAPKe8h4vvQ2QhinomOE/.well-known/jwks.json",
   ),
 );
 
@@ -22,6 +23,10 @@ const handler = createMcpHandler(
           "Format an enriched data-warehouse schema context into Jedify's schema-context YAML. " +
           "Call after the schema has been read (via the user's warehouse connector) and enriched. " +
           "Returns the YAML as text for the user to save.",
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: false,
+        },
         inputSchema: {
           enriched_context: z
             .object({ tables: z.array(z.any()) })

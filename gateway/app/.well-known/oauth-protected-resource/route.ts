@@ -5,7 +5,7 @@ import {
 
 const handler = protectedResourceHandler({
   authServerUrls: [
-    "https://auth.app.jedify.com/v1/apps/P2fGtsAm5ziAZr0swDyMDO7Tce87",
+    "https://api.descope.com/v1/apps/P3EwuWB0eAPKe8h4vvQ2QhinomOE",
   ],
 });
 
