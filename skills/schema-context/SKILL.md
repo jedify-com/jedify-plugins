@@ -1,37 +1,35 @@
 ---
 name: schema-context
-description: Generates rich semantic context YAML for data warehouse schemas. Use when a user wants to document their database, understand what tables and columns mean, label their schema for an AI or NL-to-SQL tool, or prepare context for Jedify onboarding. Works with any connected database MCP server (Snowflake, BigQuery, PostgreSQL).
+description: Generates rich semantic context YAML for data warehouse schemas. Use when a user wants to document their database, understand what tables and columns mean, label their schema for an AI or NL-to-SQL tool, or prepare context for Jedify onboarding. Works with any connected database MCP server/connector (Snowflake, BigQuery, PostgreSQL).
 ---
 
 # Schema Context Skill
 
-This skill generates a structured YAML file describing every table and column with business labels, descriptions, semantic types, and example questions. It works by using whatever database MCP server you already have connected — it does not create its own connection.
+This skill generates a structured YAML file describing every table and column with business labels, descriptions, semantic types, and example questions. It works by using whatever database MCP server/connector you already have connected — and exports the result through the Jedify connector.
 
-## Step 1 — Authentication
+## Step 1 — Jedify Connector
 
-1. Call `jedify-schema-context:check_registration_tool`.
-   - If `registered: true` → note the `company_context` field (may be empty) and proceed to Step 1b.
-   - If `registered: false` → call `jedify-schema-context:login_tool` immediately. Tell the user: "Opening the sign-in page in your browser — complete it there and come back."
+Ensure the **Jedify** connector is connected. Connecting it is the one-time sign-in / sign-up — no separate registration step is needed.
 
-2. `login_tool` opens Descope in the user's browser and blocks until they finish signing in. When it returns:
-   - If `success: true` → follow the `action` field, then continue to Step 1b.
-   - If `success: false` → follow the `action` field (usually just retry).
+If a Jedify tool call returns an unauthorized or authentication error, ask the user:
 
-## Step 1b — Company Context (optional, first run only)
+> "It looks like the Jedify connector needs to be connected. Search for **Jedify** in your connectors or Directory, connect it, and then try again."
 
-After a successful sign-in — or if `check_registration_tool` returned `registered: true` but `company_context` is empty — offer this step once:
+## Step 1b — Company Context (optional, in-conversation)
+
+Before enriching the schema, offer this step once:
 
 > "To make your schema descriptions more accurate, I can use some context about your company or data. You can share any of the following (or skip this):
 > - A URL (e.g. your website, a data catalog, or internal docs page)
 > - A file path to a README, data dictionary, or onboarding doc
 > - A short description in your own words"
 
-- If the user shares a **URL**: fetch and summarize the relevant content yourself, then call `jedify-schema-context:save_company_context_tool(context)` with your summary.
-- If the user shares a **file path**: read the file, extract the relevant context, and call `save_company_context_tool` with it.
-- If the user shares **free text**: pass it directly to `save_company_context_tool`.
+- If the user shares a **URL**: fetch and summarize the relevant content yourself and hold it in context for the enrichment step.
+- If the user shares a **file path**: read the file, extract the relevant context, and keep it in context.
+- If the user shares **free text**: hold it in context.
 - If the user skips: move on — this step is optional.
 
-On future runs, `check_registration_tool` returns the saved `company_context` automatically. Skip this step if it's already non-empty.
+Use whatever context was gathered in Step 5 (Enrich) to write more tailored descriptions and example questions.
 
 ## Step 2 — Detect the Connected Database MCP Server
 
@@ -55,11 +53,11 @@ Look for any tool whose name contains any of: `sql`, `query`, `execute`, `run_sq
 
 **If still nothing**, ask the user:
 
-> I can't find a database tool in my available tools. Which database MCP server do you have connected, and what is the tool name I should use to run SQL queries?
+> I can't find a database tool in my available tools. Which database MCP server or connector do you have connected, and what is the tool name I should use to run SQL queries?
 
 Only stop if the user confirms no database is connected, then say:
 
-> To use Jedify Schema Context, please connect a database MCP server and restart Claude Code:
+> To use Jedify Schema Context, please connect a database MCP server/connector and restart Claude Code:
 >
 > - **Snowflake**: `uvx mcp-snowflake-server` — see REFERENCE.md
 > - **BigQuery**: `uvx mcp-server-bigquery` — see REFERENCE.md
@@ -148,7 +146,7 @@ SELECT * FROM <schema>.<table> LIMIT 10;
 
 ## Step 5 — Enrich
 
-Using the column definitions, sample rows, and any company context you collected, generate semantic enrichment for each table and column. If company context is available, use it to write more accurate descriptions and generate more relevant example questions — for example, if the company is in e-commerce, frame questions around revenue, orders, and customers rather than generic terms.
+Using the column definitions, sample rows, and any company context you collected in Step 1b, generate semantic enrichment for each table and column. If company context is available, use it to write more accurate descriptions and generate more relevant example questions — for example, if the company is in e-commerce, frame questions around revenue, orders, and customers rather than generic terms.
 
 **Table-level:**
 - `label`: human-readable name (e.g. "Customer Orders" for FACT_ORDERS)
@@ -168,10 +166,11 @@ Using the column definitions, sample rows, and any company context you collected
 
 ## Step 6 — Export
 
-Call `jedify-schema-context:export_context_yaml_tool` with:
-- `enriched_context`: the full dict you assembled
-- `output_path`: `"schema_context.yaml"` (or ask the user for a preferred path)
+Call `jedify:export_schema_context` with:
+- `enriched_context`: the full enriched context object you assembled (with a `tables` array)
 - `warehouse_type`: `"snowflake"` / `"bigquery"` / `"postgres"` based on what you detected
+
+The tool returns the YAML as text. Present it to the user and ask where they would like to save it (default: `schema_context.yaml`), then write the file.
 
 ## Tips
 

@@ -4,7 +4,7 @@
 
 > "Generate a complete schema context YAML for my Snowflake warehouse and save it to schema_context.yaml"
 
-Flow: check_registration → list_available_tables → get_table_schema (all) → sample_table_data (all) → enrich in context → export_context_yaml
+Flow: discover tables (your DB connector) → read schema + sample rows for each (your DB connector) → enrich in context → `export_schema_context` → save the YAML
 
 ---
 
@@ -12,7 +12,7 @@ Flow: check_registration → list_available_tables → get_table_schema (all) �
 
 > "Describe the ORDERS table and suggest 5 questions a business analyst might ask about it."
 
-Flow: check_registration → get_table_schema(["DB.PUBLIC.ORDERS"]) → sample_table_data("DB.PUBLIC.ORDERS") → generate description in context (no YAML export needed)
+Flow: read the ORDERS schema + sample rows (your DB connector) → describe and suggest questions in context (no YAML export needed)
 
 ---
 
@@ -20,7 +20,7 @@ Flow: check_registration → get_table_schema(["DB.PUBLIC.ORDERS"]) → sample_t
 
 > "Enrich only tables in the ANALYTICS schema."
 
-Flow: list_available_tables(schema_filter="*.ANALYTICS.*") → get_table_schema + sample_table_data for each → export_context_yaml
+Flow: list tables in the ANALYTICS schema (your DB connector) → read schema + sample rows for each → enrich in context → `export_schema_context`
 
 ---
 
@@ -28,7 +28,7 @@ Flow: list_available_tables(schema_filter="*.ANALYTICS.*") → get_table_schema 
 
 > "What does the STATUS column in the ORDERS table mean? What are the possible values?"
 
-Flow: sample_table_data("DB.PUBLIC.ORDERS", column_filter=["STATUS"]) → interpret values in context
+Flow: sample the STATUS column of the ORDERS table (your DB connector) → interpret the distinct values in context
 
 ---
 
@@ -36,7 +36,7 @@ Flow: sample_table_data("DB.PUBLIC.ORDERS", column_filter=["STATUS"]) → interp
 
 > "I want to import my schema into Jedify. Generate the context YAML they need."
 
-Flow: full schema enrichment → export_context_yaml("jedify_import.yaml") → user uploads to Jedify
+Flow: full schema enrichment → `export_schema_context` → save as `jedify_import.yaml` → user uploads to Jedify
 
 ---
 

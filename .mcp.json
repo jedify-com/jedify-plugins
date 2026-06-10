@@ -1,6 +1,6 @@
 {
-  "jedify-schema-context": {
-    "command": "uvx",
-    "args": ["jedify-lens"]
+  "jedify": {
+    "type": "url",
+    "url": "https://gateway-three-nu.vercel.app/mcp"
   }
 }
