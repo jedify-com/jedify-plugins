@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildSchemaContextYaml } from "../src/yaml";
+import { buildSchemaContextYaml } from "../lib/yaml";
 
 describe("buildSchemaContextYaml", () => {
   it("wraps tables with version/warehouse header and preserves key order", () => {
