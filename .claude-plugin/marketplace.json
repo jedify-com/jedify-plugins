@@ -1,5 +1,6 @@
 {
   "name": "jedify-com-skills",
+  "description": "Jedify's Claude Code skills. Includes schema-context — connect Claude to your data warehouse and generate rich semantic context YAML (table/column labels, descriptions, semantic types, example questions) for Jedify or any NL-to-SQL tool.",
   "owner": {
     "name": "Jedify",
     "email": "adi@jedify.com"
