@@ -23,34 +23,24 @@ npx skills add jedify-com/skills -s schema-context
   "mcpServers": {
     "jedify-schema-context": {
       "command": "uvx",
-      "args": ["jedify-lens[snowflake]"],
-      "env": {
-        "WAREHOUSE_TYPE": "snowflake",
-        "SNOWFLAKE_ACCOUNT": "your-account.region",
-        "SNOWFLAKE_USER": "your_user",
-        "SNOWFLAKE_PASSWORD": "your_password",
-        "SNOWFLAKE_DATABASE": "YOUR_DATABASE",
-        "SNOWFLAKE_WAREHOUSE": "COMPUTE_WH"
-      }
+      "args": ["jedify-lens"]
     }
   }
 }
 ```
 
-Then ask Claude: *"Generate a schema context YAML for my warehouse and save it to schema_context.yaml"*
+`jedify-lens` needs no warehouse credentials of its own — it reads your schema through whatever **database MCP server you already have connected** (Snowflake, BigQuery, or Postgres). See [skills/schema-context/REFERENCE.md](skills/schema-context/REFERENCE.md) for connecting a database MCP server and the YAML output schema.
 
-See [skills/schema-context/REFERENCE.md](skills/schema-context/REFERENCE.md) for full credential setup and YAML output schema.
+Then ask Claude: *"Generate a schema context YAML for my warehouse and save it to schema_context.yaml"*
 
 ---
 
 ## Python MCP Server
 
-The `jedify-lens` PyPI package powers this skill. It's a standalone MCP server with no dependency on Jedify's backend.
+The `jedify-lens` PyPI package powers this skill. It's a standalone MCP server with no dependency on Jedify's backend, and it needs no warehouse drivers — it works through your connected database MCP server.
 
 ```bash
-pip install jedify-lens[snowflake]   # Snowflake
-pip install jedify-lens[postgres]    # PostgreSQL / Redshift
-pip install jedify-lens[all]         # All warehouses
+pip install jedify-lens
 ```
 
 Source: [server/](server/)

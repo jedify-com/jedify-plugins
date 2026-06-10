@@ -1,73 +1,80 @@
 # Schema Context — Reference
 
-## Credential Setup
+## Setup
 
-Add the following block to your `~/.claude/settings.json` under `mcpServers`, then restart Claude Code.
+Jedify Schema Context works with your existing database MCP server. You do **not** need to configure separate credentials — just connect your database MCP server and jedify-lens handles the rest.
 
-### Snowflake
+### 1. Add jedify-lens to Claude Code
 
-```json
-{
-  "mcpServers": {
-    "jedify-schema-context": {
-      "command": "uvx",
-      "args": ["jedify-lens[snowflake]"],
-      "env": {
-        "WAREHOUSE_TYPE": "snowflake",
-        "SNOWFLAKE_ACCOUNT": "your-account.region",
-        "SNOWFLAKE_USER": "your_user",
-        "SNOWFLAKE_PASSWORD": "your_password",
-        "SNOWFLAKE_DATABASE": "YOUR_DATABASE",
-        "SNOWFLAKE_SCHEMA": "PUBLIC",
-        "SNOWFLAKE_WAREHOUSE": "COMPUTE_WH",
-        "SNOWFLAKE_ROLE": ""
-      }
-    }
-  }
-}
-```
-
-For key-pair auth, set `SNOWFLAKE_PRIVATE_KEY` (PEM string) instead of `SNOWFLAKE_PASSWORD`, and optionally `SNOWFLAKE_PASSPHRASE`.
-
-### PostgreSQL
+Add this to your `~/.claude/settings.json` under `mcpServers`:
 
 ```json
 {
   "mcpServers": {
     "jedify-schema-context": {
       "command": "uvx",
-      "args": ["jedify-lens[postgres]"],
-      "env": {
-        "WAREHOUSE_TYPE": "postgres",
-        "POSTGRES_DSN": "postgresql://user:password@host:5432/database"
-      }
+      "args": ["jedify-lens"]
     }
   }
 }
 ```
 
-### Redshift
+### 2. Connect Your Database MCP Server
+
+Add one of the following to `mcpServers` as well:
+
+#### Snowflake
 
 ```json
-{
-  "mcpServers": {
-    "jedify-schema-context": {
-      "command": "uvx",
-      "args": ["jedify-lens[postgres]"],
-      "env": {
-        "WAREHOUSE_TYPE": "redshift",
-        "REDSHIFT_DSN": "postgresql://user:password@cluster.region.redshift.amazonaws.com:5439/database"
-      }
-    }
+"snowflake": {
+  "command": "uvx",
+  "args": ["mcp-server-snowflake"],
+  "env": {
+    "SNOWFLAKE_ACCOUNT": "your-account.region",
+    "SNOWFLAKE_USER": "your_user",
+    "SNOWFLAKE_PASSWORD": "your_password",
+    "SNOWFLAKE_DATABASE": "YOUR_DATABASE",
+    "SNOWFLAKE_SCHEMA": "PUBLIC",
+    "SNOWFLAKE_WAREHOUSE": "COMPUTE_WH"
   }
 }
 ```
+
+See: [Snowflake MCP Server](https://github.com/Snowflake-Labs/mcp)
+
+#### BigQuery
+
+```json
+"bigquery": {
+  "command": "npx",
+  "args": ["-y", "mcp-server-bigquery"],
+  "env": {
+    "BIGQUERY_PROJECT": "your-gcp-project",
+    "GOOGLE_APPLICATION_CREDENTIALS": "/path/to/service-account.json"
+  }
+}
+```
+
+See: [mcp-server-bigquery](https://github.com/LucasHild/mcp-server-bigquery)
+
+#### PostgreSQL
+
+```json
+"postgres": {
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://user:password@host:5432/database"]
+}
+```
+
+See: [@modelcontextprotocol/server-postgres](https://github.com/modelcontextprotocol/servers/tree/main/src/postgres)
+
+---
 
 ## YAML Output Schema
 
 ```yaml
 version: "1.0"
-generated_at: "2026-05-12T10:00:00+00:00"
+generated_at: "2026-05-20T10:00:00+00:00"
 warehouse: snowflake
 
 tables:
@@ -91,7 +98,6 @@ tables:
         description: "Unique surrogate key for each order record."
         semantic_type: identifier   # identifier | metric | dimension | date | boolean | text | numeric
         is_primary_key: true
-        is_foreign_key: false
         is_nullable: false
         sql_type: "NUMBER(38,0)"
         example_values: []
@@ -111,23 +117,49 @@ tables:
         description: "Each order belongs to one customer"
 ```
 
-## MCP Tools Reference
+---
+
+## jedify-lens MCP Tools
+
+These are the only tools jedify-lens registers. All database queries go through your connected DB MCP server.
 
 | Tool | Description |
 |---|---|
-| `check_registration_tool` | First-run check — call before anything else |
-| `register_user_tool(email, company)` | Register on first use |
-| `list_available_tables_tool(schema_filter, include_views)` | Discover all tables/views |
-| `get_table_schema_tool(table_names)` | Columns, types, constraints, row counts |
-| `sample_table_data_tool(table_name, row_limit, column_filter)` | Random row sample |
-| `export_context_yaml_tool(enriched_context, output_path, warehouse_type)` | Write YAML file |
+| `check_registration_tool` | First-run check — call before anything else (returns `registered` and any saved `company_context`) |
+| `login_tool` | Opens the Descope sign-up / sign-in page in the browser; blocks until the user completes it |
+| `save_company_context_tool(context)` | Save optional company/dataset context to improve enrichment |
+| `export_context_yaml_tool(enriched_context, output_path, warehouse_type)` | Write YAML file to disk |
+
+---
 
 ## Troubleshooting
 
-**Server not found**: Run `uvx jedify-lens --help` to verify installation. If missing, run `pip install jedify-lens`.
+**"No database tools found"**: You need a database MCP server connected. See the setup section above.
 
-**Auth errors**: Check your env vars in `~/.claude/settings.json` under `mcpServers.jedify-schema-context.env`.
+**Catalog query returns empty**: The connected DB user may lack read access on `information_schema` or system catalog views. Grant `USAGE` on the relevant schemas.
 
-**Snowflake connection timeout**: Verify `SNOWFLAKE_ACCOUNT` format: `account.region` (e.g. `xy12345.us-east-1`). Check that your IP is whitelisted.
+**Snowflake SHOW TABLES returns nothing**: Try `SHOW SCHEMAS IN DATABASE <db>` first, then `SHOW TABLES IN SCHEMA <db>.<schema>`.
 
-**Empty table list**: The connected user may lack `SHOW DATABASES` privilege. Grant `USAGE` on the relevant databases and schemas.
+**BigQuery INFORMATION_SCHEMA access denied**: Your service account needs `roles/bigquery.metadataViewer` and `roles/bigquery.dataViewer` on the relevant datasets.
+
+**jedify-lens not found**: Run `uvx jedify-lens --help` to verify installation. If missing, run `pip install jedify-lens`.
+
+---
+
+## Authentication (Descope)
+
+Sign-in is handled by Jedify's Descope **Inbound App**. The prod project is baked into
+the package, so end users need no auth configuration — the first run opens a browser to
+sign up / sign in.
+
+**Developers only** — point the plugin at a non-prod Descope project with env overrides:
+
+| Variable | Default (prod) | Purpose |
+|---|---|---|
+| `DESCOPE_BASE_URL` | `https://auth.app.jedify.com` | Descope base URL (custom domain) |
+| `DESCOPE_CLIENT_ID` | `UDJmR3RzQW01emlBWnIwc3dEeU1ETzdUY2U4Nzp…` | Inbound App client_id (public, opaque — use verbatim, do not decode) |
+
+Both values are **public identifiers** (like an OAuth `client_id`) — there is no client
+secret. The flow is a public-client Authorization Code + PKCE exchange with a
+`http://localhost:8765/callback` redirect, which must be allow-listed in the Descope
+Inbound App.
