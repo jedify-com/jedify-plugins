@@ -9,7 +9,5 @@
   "homepage": "https://jedify.com/schema-context",
   "repository": "https://github.com/jedify-com/skills",
   "license": "MIT",
-  "keywords": ["schema", "warehouse", "snowflake", "bigquery", "postgres", "context", "sql", "semantic"],
-  "skills": "skills/",
-  "mcpServers": ".mcp.json"
+  "keywords": ["schema", "warehouse", "snowflake", "bigquery", "postgres", "context", "sql", "semantic"]
 }
