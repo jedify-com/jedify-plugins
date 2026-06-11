@@ -1,6 +1,8 @@
-# jedify-com/skills
+# jedify-com/claude-plugins
 
-The **Jedify** plugin for Claude — connect Claude to your data warehouse and generate rich semantic **schema-context YAML** for every table and column: business labels, descriptions, semantic types, and example questions.
+**Jedify's plugins for Claude.** This is the Jedify marketplace — install it once, then add any Jedify plugin from it.
+
+The first plugin, **schema-context**, connects Claude to your data warehouse and generates rich semantic **schema-context YAML** for every table and column: business labels, descriptions, semantic types, and example questions.
 
 This repo holds two things that work together:
 
@@ -16,8 +18,8 @@ Jedify never connects to your database directly and never holds DB credentials �
 ```
 .
 ├── .claude-plugin/
-│   ├── plugin.json          # Plugin manifest (name "jedify", version, metadata)
-│   └── marketplace.json     # Marketplace entry (so it's installable by name)
+│   ├── plugin.json          # Plugin manifest (name "schema-context", version, metadata)
+│   └── marketplace.json     # Marketplace "jedify" — lists the plugins it offers
 ├── .mcp.json                # Pointer to the hosted MCP server (the remote connector URL)
 ├── skills/
 │   └── schema-context/
@@ -63,8 +65,8 @@ Connect Claude to your data warehouse and generate rich semantic context YAML fo
 ### Install
 
 ```text
-/plugin marketplace add jedify-com/skills
-/plugin install jedify@jedify-com-skills
+/plugin marketplace add jedify-com/claude-plugins
+/plugin install schema-context@jedify
 ```
 
 ### Use

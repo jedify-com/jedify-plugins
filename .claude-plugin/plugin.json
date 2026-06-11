@@ -1,10 +1,10 @@
 {
-  "name": "jedify",
+  "name": "schema-context",
   "version": "0.1.0",
   "description": "Jedify for Claude — connect your data warehouse and generate rich semantic schema-context YAML (labels, descriptions, semantic types, example questions). Reads your schema through your existing warehouse connector; sign in with Jedify.",
   "author": { "name": "Jedify", "email": "adi@jedify.com" },
   "homepage": "https://jedify.com",
-  "repository": "https://github.com/jedify-com/skills",
+  "repository": "https://github.com/jedify-com/claude-plugins",
   "license": "MIT",
   "keywords": ["schema", "warehouse", "snowflake", "bigquery", "postgres", "context", "sql", "semantic"]
 }
