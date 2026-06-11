@@ -9,7 +9,7 @@ Jedify Schema Context works with your existing database MCP server. You do **not
 Search for **Jedify** in the Claude plugin/connector directory, or install directly:
 
 ```
-/plugin marketplace add jedify-com/claude-plugins
+/plugin marketplace add jedify-com/jedify-plugins
 /plugin install schema-context@jedify
 ```
 

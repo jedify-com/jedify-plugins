@@ -1,4 +1,4 @@
-# jedify-com/claude-plugins
+# jedify-com/jedify-plugins
 
 **Jedify's plugins for Claude.** This is the Jedify marketplace — install it once, then add any Jedify plugin from it.
 
@@ -65,7 +65,7 @@ Connect Claude to your data warehouse and generate rich semantic context YAML fo
 ### Install
 
 ```text
-/plugin marketplace add jedify-com/claude-plugins
+/plugin marketplace add jedify-com/jedify-plugins
 /plugin install schema-context@jedify
 ```
 
