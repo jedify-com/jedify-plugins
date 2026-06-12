@@ -4,9 +4,9 @@
 
 The first plugin, **schema-context**, connects Claude to your data warehouse and generates rich semantic **schema-context YAML** for every table and column: business labels, descriptions, semantic types, and example questions.
 
-This repo holds two things that work together:
+This repo is a **marketplace** that can hold many plugins. Today it holds one:
 
-1. **The plugin** a user installs (the `schema-context` skill + a pointer to our hosted MCP server).
+1. **The `schema-context` plugin** a user installs (its skill + a pointer to our hosted MCP server).
 2. **The MCP server** (`gateway/`) that powers it, deployed as a remote connector.
 
 Jedify never connects to your database directly and never holds DB credentials — Claude reads your schema **through a database connector you already have**, and Jedify only formats and returns the result.
@@ -15,18 +15,22 @@ Jedify never connects to your database directly and never holds DB credentials �
 
 ## Repository structure
 
+The repo root is the **marketplace**; each **plugin** lives in its own folder.
+
 ```
 .
 ├── .claude-plugin/
-│   ├── plugin.json          # Plugin manifest (name "schema-context", version, metadata)
 │   └── marketplace.json     # Marketplace "jedify" — lists the plugins it offers
-├── .mcp.json                # Pointer to the hosted MCP server (the remote connector URL)
-├── skills/
-│   └── schema-context/
-│       ├── SKILL.md         # The skill itself — the step-by-step flow Claude follows
-│       ├── REFERENCE.md     # Setup, the connector tool, YAML output schema, troubleshooting
-│       └── examples.md      # Example prompts
-├── gateway/                 # The remote MCP server (Next.js + mcp-handler, hosted on Vercel)
+├── schema-context/          # ── PLUGIN: schema-context ───────────────────
+│   ├── .claude-plugin/
+│   │   └── plugin.json      #   Plugin manifest (name "schema-context")
+│   ├── .mcp.json            #   Pointer to the hosted MCP server (sign-in)
+│   └── skills/
+│       └── schema-context/
+│           ├── SKILL.md     #   The step-by-step flow Claude follows
+│           ├── REFERENCE.md #   Setup, the tool, YAML output schema, troubleshooting
+│           └── examples.md  #   Example prompts
+├── gateway/                 # Shared MCP server (Next.js + mcp-handler, hosted on Vercel)
 │   ├── app/
 │   │   ├── [transport]/route.ts                      # The MCP endpoint (/mcp) + auth
 │   │   └── .well-known/oauth-protected-resource/...  # OAuth metadata (points Claude at Jedify sign-in)
@@ -36,16 +40,18 @@ Jedify never connects to your database directly and never holds DB credentials �
 └── README.md
 ```
 
-### How the two halves connect
+**To add another plugin:** create a sibling folder (e.g. `cost-analysis/`) with its own `.claude-plugin/plugin.json`, `.mcp.json`, and `skills/`, then add an entry to `marketplace.json`. `gateway/` stays at the root as shared deploy infrastructure (it isn't part of any installed plugin).
+
+### How it connects
 
 ```
-  User installs the plugin              Claude calls the hosted server
-  ─────────────────────────             ──────────────────────────────
-  skills/schema-context/  ── guides ──►  Claude runs the skill
-  .mcp.json  ─────────── points at ──►  gateway/  (the /mcp endpoint on Vercel)
+  User installs the plugin                       Claude calls the hosted server
+  ──────────────────────────                     ──────────────────────────────
+  schema-context/skills/…    ── guides ──►        Claude runs the skill
+  schema-context/.mcp.json   ── points at ──►     gateway/  (the /mcp endpoint on Vercel)
 ```
 
-- **The plugin** (`.claude-plugin/` + `skills/` + `.mcp.json`) is what a user downloads. The skill tells Claude *what to do*; `.mcp.json` tells Claude *where the server is*.
+- **The plugin** (`schema-context/` — its `plugin.json` + `skills/` + `.mcp.json`) is what a user downloads. The skill tells Claude *what to do*; `.mcp.json` tells Claude *where the server is*.
 - **The server** (`gateway/`) is the live thing that does the work. It exposes a single tool, `export_schema_context`, which takes Claude's enriched schema and returns the formatted YAML.
 - **Sign-in** is handled by the server's OAuth flow (Jedify as the identity provider). Connecting the Jedify connector is the one-time sign-in — there's no separate registration.
 
@@ -60,7 +66,7 @@ Connect Claude to your data warehouse and generate rich semantic context YAML fo
 ### Prerequisites
 
 1. **[Claude Code](https://claude.com/claude-code)** or **[claude.ai](https://claude.ai)** — CLI, desktop app, VS Code extension, or web.
-2. **A database MCP server or connector** for your warehouse (Snowflake / BigQuery / PostgreSQL / Redshift). The skill reads your schema and sample rows **through this connector** — Jedify never connects to your database directly and never holds DB credentials. See [skills/schema-context/REFERENCE.md](skills/schema-context/REFERENCE.md) for setup.
+2. **A database MCP server or connector** for your warehouse (Snowflake / BigQuery / PostgreSQL / Redshift). The skill reads your schema and sample rows **through this connector** — Jedify never connects to your database directly and never holds DB credentials. See [schema-context/skills/schema-context/REFERENCE.md](schema-context/skills/schema-context/REFERENCE.md) for setup.
 
 ### Install
 
@@ -71,12 +77,12 @@ Connect Claude to your data warehouse and generate rich semantic context YAML fo
 
 ### Use
 
-1. Make sure a **database MCP server or connector** is connected (see [REFERENCE.md](skills/schema-context/REFERENCE.md)).
+1. Make sure a **database MCP server or connector** is connected (see [REFERENCE.md](schema-context/skills/schema-context/REFERENCE.md)).
 2. Ask Claude:
    > *"Generate a schema context YAML for my warehouse and save it to `schema_context.yaml`"*
 3. On **first use**, sign in to Jedify when prompted — this is the one-time sign-up / sign-in. Connecting the Jedify connector is all it takes.
 
-Claude then discovers your tables, samples a few rows, enriches everything, and returns the YAML for you to save. See [skills/schema-context/SKILL.md](skills/schema-context/SKILL.md) for the full flow and [examples.md](skills/schema-context/examples.md) for prompt examples.
+Claude then discovers your tables, samples a few rows, enriches everything, and returns the YAML for you to save. See [schema-context/skills/schema-context/SKILL.md](schema-context/skills/schema-context/SKILL.md) for the full flow and [examples.md](schema-context/skills/schema-context/examples.md) for prompt examples.
 
 ---
 
